@@ -97,44 +97,6 @@ public class ProductionCalendar extends RelativeLayout {
         private GridLayout mGrid;
         private TextView mText;
 
-        private int[][] calendarMatrix;
-        private List<Integer> weekends;
-        private List<Integer> shorts;
-        private List<Integer> holydays;
-        private int lastDayOfMonth;
-
-        @Override
-        public void onCreate(@Nullable Bundle savedInstanceState) {
-            super.onCreate(savedInstanceState);
-
-            //do some preparations
-            Calendar c = GregorianCalendar.getInstance();
-            c.set(Calendar.MONTH, mMonth);
-            int weekCount = c.getActualMaximum(Calendar.WEEK_OF_MONTH);
-            calendarMatrix = new int[7][weekCount];
-            lastDayOfMonth = c.getActualMaximum(Calendar.DAY_OF_MONTH);
-            for (int i = 1; i <= lastDayOfMonth; i++){
-                c.set(Calendar.DAY_OF_MONTH, i);
-                int dayNum = c.get(Calendar.DAY_OF_WEEK);
-                int dayIndex = (dayNum == 1) ? 6 : dayNum - 2; //make right mon to sun order
-                int weekNum = c.get(Calendar.WEEK_OF_MONTH);
-                int weekIndex = weekNum - 1;
-                calendarMatrix[dayIndex][weekIndex] = i;
-            }
-            weekends = new LinkedList<>();
-            for (int i=0; i < Data.YEAR_2017[0][mMonth].length;i++){
-                weekends.add(Data.YEAR_2017[0][mMonth][i]);
-            }
-            shorts = new LinkedList<>();
-            for (int i=0; i < Data.YEAR_2017[1][mMonth].length;i++){
-                shorts.add(Data.YEAR_2017[1][mMonth][i]);
-            }
-            holydays = new LinkedList<>();
-            for (int i=0; i < Data.YEAR_2017[2][mMonth].length;i++){
-                holydays.add(Data.YEAR_2017[2][mMonth][i]);
-            }
-
-        }
 
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -143,6 +105,33 @@ public class ProductionCalendar extends RelativeLayout {
             mMonth = args.getInt(MONTH_NUMBER);
             mGrid = rootView.findViewById(R.id.grid);
             mText = rootView.findViewById(R.id.text);
+
+            //do some preparations
+            Calendar c = GregorianCalendar.getInstance();
+            c.set(Calendar.MONTH, mMonth);
+            int weekCount = c.getActualMaximum(Calendar.WEEK_OF_MONTH);
+            int[][] calendarMatrix = new int[7][weekCount];
+            int lastDayOfMonth = c.getActualMaximum(Calendar.DAY_OF_MONTH);
+            for (int i = 1; i <= lastDayOfMonth; i++){
+                c.set(Calendar.DAY_OF_MONTH, i);
+                int dayNum = c.get(Calendar.DAY_OF_WEEK);
+                int dayIndex = (dayNum == 1) ? 6 : dayNum - 2; //make right mon to sun order
+                int weekNum = c.get(Calendar.WEEK_OF_MONTH);
+                int weekIndex = weekNum - 1;
+                calendarMatrix[dayIndex][weekIndex] = i;
+            }
+            List<Integer> weekends = new LinkedList<>();
+            for (int i=0; i < Data.YEAR_2017[0][mMonth].length;i++){
+                weekends.add(Data.YEAR_2017[0][mMonth][i]);
+            }
+            List<Integer> shorts = new LinkedList<>();
+            for (int i=0; i < Data.YEAR_2017[1][mMonth].length;i++){
+                shorts.add(Data.YEAR_2017[1][mMonth][i]);
+            }
+            List<Integer> holydays = new LinkedList<>();
+            for (int i=0; i < Data.YEAR_2017[2][mMonth].length;i++){
+                holydays.add(Data.YEAR_2017[2][mMonth][i]);
+            }
 
 
             mGrid.setColumnCount(7);
