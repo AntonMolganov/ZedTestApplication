@@ -6,7 +6,7 @@ import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentStatePagerAdapter;
+import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.util.AttributeSet;
 import android.view.Gravity;
@@ -56,11 +56,14 @@ public class ProductionCalendar extends RelativeLayout {
         mViewPager.setAdapter(new PagerAdapter(fm));
         Calendar c = Calendar.getInstance();
         mViewPager.setCurrentItem(c.get(Calendar.MONTH));
+        mViewPager.setOffscreenPageLimit(2);
     }
 
-    private class PagerAdapter extends FragmentStatePagerAdapter {
+    private class PagerAdapter extends FragmentPagerAdapter {
 
         private final static int MONTHS_TO_SHOW = 12;
+
+        private Fragment[] mFragments = new Fragment[MONTHS_TO_SHOW];
 
         PagerAdapter(FragmentManager fm) {
             super(fm);
@@ -68,11 +71,13 @@ public class ProductionCalendar extends RelativeLayout {
 
         @Override
         public Fragment getItem(int i) {
-            Fragment fragment = new PageFragment();
-            Bundle args = new Bundle();
-            args.putInt(PageFragment.MONTH_NUMBER, i);
-            fragment.setArguments(args);
-            return fragment;
+            if (mFragments[i] == null){
+                mFragments[i] = new PageFragment();
+                Bundle args = new Bundle();
+                args.putInt(PageFragment.MONTH_NUMBER, i);
+                mFragments[i].setArguments(args);
+            }
+            return mFragments[i];
         }
 
         @Override
@@ -96,22 +101,26 @@ public class ProductionCalendar extends RelativeLayout {
         private int mMonth;
         private GridLayout mGrid;
         private TextView mText;
+        private int[][] calendarMatrix;
+        private int lastDayOfMonth;
+        private List<Integer> weekends;
+        private List<Integer> shorts;
+        private List<Integer> holydays;
 
+        private View mRootView;
 
         @Override
-        public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-            View rootView = inflater.inflate(R.layout.productioncalendar_page, container, false);
+        public void onCreate(@Nullable Bundle savedInstanceState) {
+            super.onCreate(savedInstanceState);
             Bundle args = getArguments();
             mMonth = args.getInt(MONTH_NUMBER);
-            mGrid = rootView.findViewById(R.id.grid);
-            mText = rootView.findViewById(R.id.text);
 
             //do some preparations
             Calendar c = GregorianCalendar.getInstance();
             c.set(Calendar.MONTH, mMonth);
             int weekCount = c.getActualMaximum(Calendar.WEEK_OF_MONTH);
-            int[][] calendarMatrix = new int[7][weekCount];
-            int lastDayOfMonth = c.getActualMaximum(Calendar.DAY_OF_MONTH);
+            calendarMatrix = new int[7][weekCount];
+            lastDayOfMonth = c.getActualMaximum(Calendar.DAY_OF_MONTH);
             for (int i = 1; i <= lastDayOfMonth; i++){
                 c.set(Calendar.DAY_OF_MONTH, i);
                 int dayNum = c.get(Calendar.DAY_OF_WEEK);
@@ -120,66 +129,73 @@ public class ProductionCalendar extends RelativeLayout {
                 int weekIndex = weekNum - 1;
                 calendarMatrix[dayIndex][weekIndex] = i;
             }
-            List<Integer> weekends = new LinkedList<>();
+            weekends = new LinkedList<>();
             for (int i=0; i < Data.YEAR_2017[0][mMonth].length;i++){
                 weekends.add(Data.YEAR_2017[0][mMonth][i]);
             }
-            List<Integer> shorts = new LinkedList<>();
+            shorts = new LinkedList<>();
             for (int i=0; i < Data.YEAR_2017[1][mMonth].length;i++){
                 shorts.add(Data.YEAR_2017[1][mMonth][i]);
             }
-            List<Integer> holydays = new LinkedList<>();
+            holydays = new LinkedList<>();
             for (int i=0; i < Data.YEAR_2017[2][mMonth].length;i++){
                 holydays.add(Data.YEAR_2017[2][mMonth][i]);
             }
+        }
 
+        @Override
+        public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+            if (mRootView == null) {
+                mRootView = inflater.inflate(R.layout.productioncalendar_page, container, false);
 
-            mGrid.setColumnCount(7);
-            //setup day captions
-            for (int i = 0; i < 7; i++){
-                String[] namesOfDays = DateFormatSymbols.getInstance().getShortWeekdays();//get locale specific names
-                int index = (i < 6) ? i + 2 : 1; //make right mon to sun order
-                CellView cell = new CellView(getContext());
-                cell.setText(namesOfDays[index]);
-                mGrid.addView(cell,i);
-            }
+                mGrid = mRootView.findViewById(R.id.grid);
+                mText = mRootView.findViewById(R.id.text);
 
-
-            //setup days
-
-            for (int i = 0; i < calendarMatrix.length * calendarMatrix[0].length; i++){
-                CellView cell = new CellView(getContext());
-                int weekIndex = i / 7;
-                int dayIndex = i % 7;
-                int dayNum = calendarMatrix[dayIndex][weekIndex];
-                if (dayNum != 0) {
-                    cell.setText(Integer.toString(dayNum));
-                    if (shorts.contains(dayNum)) cell.setBackgroundColor(getResources().getColor(R.color.yellowDay));
-                    else if (holydays.contains(dayNum) || weekends.contains(dayNum)) cell.setBackgroundColor(getResources().getColor(R.color.redDay));
-                    else cell.setBackgroundColor(Color.TRANSPARENT);
-                }else{
-                    cell.setText("");
-                    cell.setBackgroundColor(Color.TRANSPARENT);
+                mGrid.setColumnCount(7);
+                //setup day captions
+                for (int i = 0; i < 7; i++) {
+                    String[] namesOfDays = DateFormatSymbols.getInstance().getShortWeekdays();//get locale specific names
+                    int index = (i < 6) ? i + 2 : 1; //make right mon to sun order
+                    CellView cell = new CellView(getContext());
+                    cell.setText(namesOfDays[index]);
+                    mGrid.addView(cell, i);
                 }
-                mGrid.addView(cell,i+7);
+
+                //setup days
+                for (int i = 0; i < calendarMatrix.length * calendarMatrix[0].length; i++) {
+                    CellView cell = new CellView(getContext());
+                    int weekIndex = i / 7;
+                    int dayIndex = i % 7;
+                    int dayNum = calendarMatrix[dayIndex][weekIndex];
+                    if (dayNum != 0) {
+                        cell.setText(Integer.toString(dayNum));
+                        if (shorts.contains(dayNum))
+                            cell.setBackgroundColor(getResources().getColor(R.color.yellowDay));
+                        else if (holydays.contains(dayNum) || weekends.contains(dayNum))
+                            cell.setBackgroundColor(getResources().getColor(R.color.redDay));
+                        else cell.setBackgroundColor(Color.TRANSPARENT);
+                    } else {
+                        cell.setText("");
+                        cell.setBackgroundColor(Color.TRANSPARENT);
+                    }
+                    mGrid.addView(cell, i + 7);
+                }
+
+                //setup description
+                StringBuilder description = new StringBuilder(getResources().getString(R.string.holydays_list) + ": ");
+                for (int i = 0; i < Data.YEAR_2017[2][mMonth].length; i++) {
+                    description.append(Data.YEAR_2017[2][mMonth][i]).append(" ");
+                }
+                description.append("\n").append(getResources().getString(R.string.calendardays)).append(": ").append(lastDayOfMonth);
+                description.append("\n").append(getResources().getString(R.string.workdays)).append(": ").append(lastDayOfMonth - weekends.size() - holydays.size());
+                description.append("\n").append(getResources().getString(R.string.holydays)).append(": ").append(holydays.size() + weekends.size());
+                description.append("\n").append(getResources().getString(R.string.hours_40)).append(": ").append(Data.YEAR_2017_HOURS[mMonth][0]);
+                description.append("\n").append(getResources().getString(R.string.hours_36)).append(": ").append(Data.YEAR_2017_HOURS[mMonth][1]);
+                description.append("\n").append(getResources().getString(R.string.hours_24)).append(": ").append(Data.YEAR_2017_HOURS[mMonth][2]);
+                description.append("\n").append(mMonth / 3 + 1).append(" ").append(getResources().getString(R.string.quarter)).append(", ").append(mMonth / 6 + 1).append(" ").append(getResources().getString(R.string.halfyear)).append(", 2017 ").append(getResources().getString(R.string.year));
+                mText.setText(description.toString());
             }
-
-            //setup description
-            StringBuilder description = new StringBuilder(getResources().getString(R.string.holydays_list) + ": ");
-            for (int i = 0; i < Data.YEAR_2017[2][mMonth].length; i++) {
-                description.append(Data.YEAR_2017[2][mMonth][i]).append(" ");
-            }
-            description.append("\n").append(getResources().getString(R.string.calendardays)).append(": ").append(lastDayOfMonth);
-            description.append("\n").append(getResources().getString(R.string.workdays)).append(": ").append(lastDayOfMonth - weekends.size() - holydays.size());
-            description.append("\n").append(getResources().getString(R.string.holydays)).append(": ").append(holydays.size() + weekends.size());
-            description.append("\n").append(getResources().getString(R.string.hours_40)).append(": ").append(Data.YEAR_2017_HOURS[mMonth][0]);
-            description.append("\n").append(getResources().getString(R.string.hours_36)).append(": ").append(Data.YEAR_2017_HOURS[mMonth][1]);
-            description.append("\n").append(getResources().getString(R.string.hours_24)).append(": ").append(Data.YEAR_2017_HOURS[mMonth][2]);
-            description.append("\n").append(mMonth / 3 + 1).append(" ").append(getResources().getString(R.string.quarter)).append(", ").append(mMonth / 6 + 1).append(" ").append(getResources().getString(R.string.halfyear)).append(", 2017 ").append(getResources().getString(R.string.year));
-
-
-            mText.setText(description.toString());
-            return rootView;
+            return mRootView;
         }
     }
 
@@ -202,6 +218,7 @@ public class ProductionCalendar extends RelativeLayout {
         private void init(){
             setGravity(Gravity.CENTER);
             setSingleLine();
+            setHorizontallyScrolling(false);
         }
 
         @Override
