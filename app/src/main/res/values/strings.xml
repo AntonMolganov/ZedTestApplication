@@ -1,3 +1,16 @@
 <resources>
     <string name="app_name">ZedTestApplication</string>
+
+    <string name="holydays_list">Праздники</string>
+    <string name="calendardays">Календарных дней</string>
+    <string name="workdays">Рабочих дней</string>
+    <string name="holydays">Выходных и праздничных дней</string>
+    <string name="hours_40">Часов в 40 часовой рабочей неделе</string>
+    <string name="hours_36">Часов в 36 часовой рабочей неделе</string>
+    <string name="hours_24">Часов в 24 часовой рабочей неделе</string>
+    <string name="quarter">квартал</string>
+    <string name="halfyear">полугодие</string>
+    <string name="year">год</string>
+
+
 </resources>
